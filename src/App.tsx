@@ -540,8 +540,8 @@ export default function App() {
         activeRingingCount={ringingItem ? 1 : 0}
       />
 
-      {/* Clean 3-Tab Bar */}
-      <div className="bg-white border-b border-slate-200/80 sticky top-16 sm:top-18 z-30 shadow-2xs">
+      {/* Clean 3-Tab Bar (Desktop/Tablet) */}
+      <div className="hidden sm:block bg-white border-b border-slate-200/80 sticky top-16 sm:top-18 z-30 shadow-2xs">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between overflow-x-auto py-2 gap-2">
             <div className="flex items-center gap-1 sm:gap-2">
@@ -666,45 +666,62 @@ export default function App() {
         />
       )}
 
-      {/* Mobile Bottom Thumb Navigation */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 py-2 flex items-center justify-between">
+      {/* Mobile Bottom Thumb Navigation - Accessible, 48px+ Tap Targets for all ages */}
+      <nav 
+        aria-label="Mobile Navigation"
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 py-1.5 flex items-center justify-around shadow-lg"
+      >
         <button
           onClick={() => setActiveTab('alarms')}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
-            activeTab === 'alarms' ? 'text-blue-600' : 'text-slate-400'
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 min-h-[48px] rounded-xl transition-all cursor-pointer ${
+            activeTab === 'alarms' 
+              ? 'text-blue-600 font-extrabold' 
+              : 'text-slate-500 hover:text-slate-800 font-medium'
           }`}
+          aria-label="Alarms and Reminders Tab"
         >
-          <Clock className="w-5 h-5" />
-          <span>Alarms</span>
+          <Clock className={`w-5 h-5 ${activeTab === 'alarms' ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+          <span className="text-[11px] mt-0.5">Alarms</span>
         </button>
 
-        <button
-          onClick={() => handleOpenSendModalWithTarget()}
-          className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 -mt-5 active:scale-95 transition-all cursor-pointer"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
+        {/* Floating Center Send Button */}
+        <div className="flex-1 flex justify-center -mt-6">
+          <button
+            onClick={() => handleOpenSendModalWithTarget()}
+            className="w-13 h-13 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg shadow-blue-600/35 active:scale-95 transition-all cursor-pointer ring-4 ring-white"
+            aria-label="Send New Reminder or Alarm"
+            title="Send New Reminder or Alarm"
+          >
+            <Plus className="w-6 h-6 stroke-[2.5px]" />
+          </button>
+        </div>
 
         <button
           onClick={() => setActiveTab('trusted')}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
-            activeTab === 'trusted' ? 'text-blue-600' : 'text-slate-400'
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 min-h-[48px] rounded-xl transition-all cursor-pointer ${
+            activeTab === 'trusted' 
+              ? 'text-blue-600 font-extrabold' 
+              : 'text-slate-500 hover:text-slate-800 font-medium'
           }`}
+          aria-label="My People and Auto-Accept Tab"
         >
-          <ShieldCheck className="w-5 h-5" />
-          <span>My People</span>
+          <ShieldCheck className={`w-5 h-5 ${activeTab === 'trusted' ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+          <span className="text-[11px] mt-0.5">My People</span>
         </button>
 
         <button
           onClick={() => setActiveTab('calendar')}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
-            activeTab === 'calendar' ? 'text-blue-600' : 'text-slate-400'
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 min-h-[48px] rounded-xl transition-all cursor-pointer ${
+            activeTab === 'calendar' 
+              ? 'text-blue-600 font-extrabold' 
+              : 'text-slate-500 hover:text-slate-800 font-medium'
           }`}
+          aria-label="Calendar Tab"
         >
-          <CalendarIcon className="w-5 h-5" />
-          <span>Calendar</span>
+          <CalendarIcon className={`w-5 h-5 ${activeTab === 'calendar' ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+          <span className="text-[11px] mt-0.5">Calendar</span>
         </button>
-      </div>
+      </nav>
 
     </div>
   );

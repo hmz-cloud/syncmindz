@@ -225,8 +225,12 @@ export const TrustedCircleView: React.FC<TrustedCircleViewProps> = ({
                   </p>
                 </div>
 
-                {/* Toggle Pill */}
+                {/* Toggle Pill - Accessible, large tap target for all ages */}
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isAutoAccept}
+                  aria-label={`Toggle Auto-Accept for ${contact.name}`}
                   onClick={() =>
                     onUpdateRule(contact.id, {
                       level: isAutoAccept ? 'require_approval' : 'auto_accept',
@@ -236,12 +240,12 @@ export const TrustedCircleView: React.FC<TrustedCircleViewProps> = ({
                       allowLoudOverride: !isAutoAccept,
                     })
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500/50 ${
                     isAutoAccept ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
                       isAutoAccept ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
