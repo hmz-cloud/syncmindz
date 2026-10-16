@@ -39,7 +39,7 @@ export function AuthScreen({ onLang }: { onLang: (l: Lang) => void }) {
           className="tap inline-flex items-center gap-2 px-4 rounded-full border-2 border-line font-semibold"
         >
           <Globe className="w-5 h-5" aria-hidden />
-          {lang === 'ar' ? 'English' : 'العربية'}
+          <span lang={lang === 'ar' ? 'en' : 'ar'}>{lang === 'ar' ? 'English' : 'العربية'}</span>
         </button>
       </div>
 
@@ -53,7 +53,7 @@ export function AuthScreen({ onLang }: { onLang: (l: Lang) => void }) {
             <input
               id="email" type="email" required autoComplete="email" inputMode="email" dir="ltr"
               value={email} onChange={(e) => setEmail(e.target.value)}
-              className="tap w-full rounded-2xl border-2 border-line bg-card px-4 text-[1.1rem] focus:border-brand outline-none"
+              className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-[1.1rem] focus:border-brand outline-none"
               aria-describedby="email-hint"
             />
             <p id="email-hint" className="text-ink-2">{t('auth.emailHint')}</p>
@@ -68,7 +68,7 @@ export function AuthScreen({ onLang }: { onLang: (l: Lang) => void }) {
             <input
               id="code" required autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]*" maxLength={6} dir="ltr"
               value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              className="tap w-full rounded-2xl border-2 border-line bg-card px-4 text-center text-[1.8rem] tracking-[0.4em] font-bold focus:border-brand outline-none ltr-nums"
+              className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-center text-[1.8rem] tracking-[0.4em] font-bold focus:border-brand outline-none ltr-nums"
             />
             <Button type="submit" block disabled={busy || code.length < 6}>{t('auth.verify')}</Button>
             <Button variant="ghost" block onClick={() => { setStep('email'); setCode(''); setError(''); }}>
@@ -98,7 +98,7 @@ export function NameSetup({ onSave }: { onSave: (name: string) => Promise<void> 
         <input
           id="name" required autoFocus maxLength={60} autoComplete="given-name" aria-describedby="name-hint"
           placeholder={t('name.placeholder')} value={name} onChange={(e) => setName(e.target.value)}
-          className="tap w-full rounded-2xl border-2 border-line bg-card px-4 text-[1.2rem] focus:border-brand outline-none"
+          className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-[1.2rem] focus:border-brand outline-none"
         />
         <Button type="submit" block disabled={busy || !name.trim()}>{t('name.save')}</Button>
       </form>

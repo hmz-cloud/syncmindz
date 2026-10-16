@@ -35,7 +35,10 @@ export function HomeView({ sync, userId, simple }: { sync: SyncState; userId: st
   const cancel = (item: Item) => {
     const prev = item.status;
     run(actions.cancel(item));
-    toast({ text: t('item.status.cancelled'), actionLabel: t('item.undo'), onAction: () => void actions.restore(item, prev) });
+    toast({
+      text: t('item.status.cancelled'), actionLabel: t('item.undo'),
+      onAction: () => run(actions.restore(item, prev)),
+    });
   };
 
   return (

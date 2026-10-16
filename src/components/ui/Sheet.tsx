@@ -3,8 +3,10 @@ import { X } from 'lucide-react';
 import { useT } from '../../lib/i18n';
 
 /** Accessible bottom sheet / dialog: focus trapped, Escape closes, focus returns on close. */
-export function Sheet({ title, onClose, children, footer }: {
+export function Sheet({ title, onClose, children, footer, dismissible = true }: {
   title: string; onClose: () => void; children: ReactNode; footer?: ReactNode;
+  /** false = tapping outside does nothing (protects a half-filled form) */
+  dismissible?: boolean;
 }) {
   const { t } = useT();
   const id = useId();
@@ -38,7 +40,7 @@ export function Sheet({ title, onClose, children, footer }: {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/50" onClick={dismissible ? onClose : undefined}>
       <div
         ref={ref}
         role="dialog"

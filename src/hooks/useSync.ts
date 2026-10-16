@@ -14,6 +14,37 @@ export function useSession() {
   return session;
 }
 
+// ── Offline outbox: "Done" / "Snooze" pressed without internet are kept and retried,
+// so the sender is never told "not confirmed" when the person actually confirmed.
+const OUTBOX = 'syncmindz.outbox';
+type Pending = { id: string; patch: Partial<Item> & { due_pushed_at?: null } };
+const readOutbox = (): Pending[] => { try { return JSON.parse(localStorage.getItem(OUTBOX) || '[]'); } catch { return []; } };
+const writeOutbox = (q: Pending[]) => { try { localStorage.setItem(OUTBOX, JSON.stringify(q)); } catch { /* storage unavailable */ } };
+const isNetworkError = (e: { message?: string } | null) => !!e && /fetch|network|offline|Failed to fetch/i.test(e.message ?? '');
+
+async function flushOutbox() {
+  const q = readOutbox();
+  if (!q.length) return;
+  const left: Pending[] = [];
+  for (const p of q) {
+    const { error } = await supabase.from('items').update(p.patch).eq('id', p.id);
+    if (error && isNetworkError(error)) left.push(p); // drop non-network errors (e.g. item cancelled meanwhile)
+  }
+  writeOutbox(left);
+}
+const applyOutbox = (items: Item[]) => {
+  const q = readOutbox();
+  return q.length ? items.map((i) => { const p = q.filter((x) => x.id === i.id).pop(); return p ? { ...i, ...p.patch } as Item : i; }) : items;
+};
+
+/** Update an item; if offline, queue it instead of losing it. */
+async function updateOrQueue(id: string, patch: Pending['patch']) {
+  const { error } = await supabase.from('items').update(patch).eq('id', id);
+  if (!error) return;
+  if (isNetworkError(error)) { writeOutbox([...readOutbox(), { id, patch }]); return; }
+  throw error;
+}
+
 export function useSync(userId: string) {
   const [me, setMe] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -22,11 +53,16 @@ export function useSync(userId: string) {
   const [items, setItems] = useState<Item[]>([]);
   const [loaded, setLoaded] = useState(false);
   const loadingRef = useRef(false);
+  const againRef = useRef(false);
 
   const load = useCallback(async () => {
-    if (loadingRef.current) return;
+    // If a change arrives mid-load, run once more afterwards so nothing is missed.
+    if (loadingRef.current) { againRef.current = true; return; }
     loadingRef.current = true;
     try {
+      do {
+      againRef.current = false;
+      await flushOutbox();
       const since = new Date(Date.now() - 7 * 864e5).toISOString();
       const [p, c, r, i] = await Promise.all([
         supabase.from('profiles').select('*'),
@@ -42,8 +78,9 @@ export function useSync(userId: string) {
       }
       if (c.data) setConnections(c.data as Connection[]);
       if (r.data) setRules(r.data as TrustRule[]);
-      if (i.data) setItems(i.data as Item[]);
+      if (i.data) setItems(applyOutbox(i.data as Item[]));
       setLoaded(true);
+      } while (againRef.current);
     } finally {
       loadingRef.current = false;
     }
@@ -112,22 +149,18 @@ export function useSync(userId: string) {
         const next = nextOccurrence(item.due_at, item.repeat);
         const patch = { status: 'scheduled' as const, due_at: next, snooze_until: null, reply: reply ?? null, done_at: now };
         patchLocal(item.id, patch);
-        const { error } = await supabase.from('items').update({ ...patch, due_pushed_at: null }).eq('id', item.id);
-        if (error) throw error;
+        await updateOrQueue(item.id, { ...patch, due_pushed_at: null });
       } else {
         const patch = { status: 'done' as const, reply: reply ?? null, done_at: now, snooze_until: null };
         patchLocal(item.id, patch);
-        const { error } = await supabase.from('items').update(patch).eq('id', item.id);
-        if (error) throw error;
+        await updateOrQueue(item.id, patch);
       }
     },
 
     async snooze(item: Item, minutes = 10) {
       const until = new Date(Date.now() + minutes * 60_000).toISOString();
       patchLocal(item.id, { status: 'snoozed', snooze_until: until });
-      const { error } = await supabase.from('items')
-        .update({ status: 'snoozed', snooze_until: until, due_pushed_at: null }).eq('id', item.id);
-      if (error) throw error;
+      await updateOrQueue(item.id, { status: 'snoozed', snooze_until: until, due_pushed_at: null });
     },
 
     async approve(item: Item, always: boolean) {
@@ -135,9 +168,12 @@ export function useSync(userId: string) {
       const { error } = await supabase.from('items').update({ status: 'scheduled' }).eq('id', item.id);
       if (error) throw error;
       if (always) {
-        await supabase.from('trust_rules')
-          .update({ level: 'auto', allow_alarms: true, updated_at: new Date().toISOString() })
+        // "Always allow" = no more approval prompts. Loud alarms stay a separate choice in My people.
+        setRules((rs) => rs.map((r) => (r.owner_id === userId && r.sender_id === item.sender_id ? { ...r, level: 'auto' } : r)));
+        const { error: e2 } = await supabase.from('trust_rules')
+          .update({ level: 'auto', updated_at: new Date().toISOString() })
           .eq('owner_id', userId).eq('sender_id', item.sender_id);
+        if (e2) throw e2;
       }
     },
 
@@ -155,7 +191,8 @@ export function useSync(userId: string) {
 
     async restore(item: Item, status: Item['status']) {
       patchLocal(item.id, { status });
-      await supabase.from('items').update({ status }).eq('id', item.id);
+      const { error } = await supabase.from('items').update({ status }).eq('id', item.id);
+      if (error) { await load(); throw error; }
     },
 
     async requestConnection(code: string) {

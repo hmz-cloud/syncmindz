@@ -23,7 +23,7 @@ export function SettingsView({ sync, userId }: { sync: SyncState; userId: string
     actions.updateProfile(patch).catch((e) => toast({ text: t(errorKey(e)), tone: 'error' }));
 
   const seg = (active: boolean) =>
-    `tap flex-1 rounded-2xl border-2 font-semibold ${active ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line bg-card'}`;
+    `tap flex-1 rounded-2xl border-2 font-semibold ${active ? 'border-brand bg-brand-soft text-brand-dark' : 'border-field bg-card'}`;
 
   const testAlarm = async () => {
     unlockAudio();
@@ -54,7 +54,7 @@ export function SettingsView({ sync, userId }: { sync: SyncState; userId: string
         <h2 className="text-[1.15rem] font-bold">{t('settings.language')}</h2>
         <div className="flex gap-3" role="group" aria-label={t('settings.language')}>
           {(['ar', 'en'] as Lang[]).map((l) => (
-            <button key={l} type="button" aria-pressed={me.language === l} onClick={() => save({ language: l })} className={seg(me.language === l)}>
+            <button key={l} lang={l} type="button" aria-pressed={me.language === l} onClick={() => save({ language: l })} className={seg(me.language === l)}>
               {l === 'ar' ? 'العربية' : 'English'}
             </button>
           ))}
@@ -88,7 +88,7 @@ export function SettingsView({ sync, userId }: { sync: SyncState; userId: string
           <label htmlFor="s-name" className="block text-[1.15rem] font-bold">{t('settings.name')}</label>
           <div className="flex gap-3">
             <input id="s-name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)}
-              className="tap flex-1 min-w-0 rounded-2xl border-2 border-line bg-card px-4 focus:border-brand outline-none" />
+              className="tap flex-1 min-w-0 rounded-2xl border-2 border-field bg-card px-4 focus:border-brand outline-none" />
             <Button type="submit" variant="secondary">{t('send.save')}</Button>
           </div>
         </form>

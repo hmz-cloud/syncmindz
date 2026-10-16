@@ -80,20 +80,33 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
   const handled = useRef(new Set<string>());
 
   const mine = useMemo(() => items.filter((i) => i.receiver_id === userId), [items, userId]);
-  const ringing = items.find((i) => i.id === ringingId) ?? null;
+  // Only ring live items: if it was cancelled or done elsewhere, the ringing screen closes.
+  const ringing = items.find((i) => i.id === ringingId && ['scheduled', 'snoozed'].includes(i.status)) ?? null;
+  useEffect(() => { if (ringingId && !ringing && loaded) setRingingId(null); }, [ringingId, ringing, loaded]);
 
-  // Native: notification taps + permission prompt once
+  // Native: notification taps. On a cold start the tap can arrive before data loads,
+  // so it is held and replayed once items are in.
+  const pendingAction = useRef<{ id: string; a: string } | null>(null);
   const openItem = useCallback((itemId: string, action: string) => {
     const it = sync.items.find((i) => i.id === itemId);
-    if (action === 'SNOOZE' && it) { void actions.snooze(it); return; }
-    if (action === 'DONE' && it) { void actions.markDone(it); return; }
+    if (!it && !loaded) { pendingAction.current = { id: itemId, a: action }; return; }
+    if (action === 'SNOOZE' && it) { actions.snooze(it).catch(() => {}); return; }
+    if (action === 'DONE' && it) { actions.markDone(it).catch(() => {}); return; }
     setRingingId(itemId);
-  }, [sync.items, actions]);
+  }, [sync.items, actions, loaded]);
   const openRef = useRef(openItem);
   openRef.current = openItem;
   useEffect(() => {
-    void setupNative((id, a) => openRef.current(id, a));
+    if (loaded && pendingAction.current) {
+      const p = pendingAction.current;
+      pendingAction.current = null;
+      openItem(p.id, p.a);
+    }
+  }, [loaded, openItem]);
+  useEffect(() => {
+    void setupNative((id, a) => openRef.current(id, a), lang);
     void checkPermission().then((p) => { if (p === 'prompt') void requestPermission(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Mirror upcoming items into the OS alarm scheduler (works with the app closed).
@@ -159,24 +172,26 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
   return (
     <LangContext.Provider value={ctx}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[80] bg-card p-3 rounded-xl">
-        {t('nav.home')}
+        {t('nav.skip')}
       </a>
 
-      <main id="main" className="max-w-xl mx-auto px-5 safe-top pb-44">
+      <main id="main" inert={ringing ? true : undefined} className="max-w-xl mx-auto px-5 safe-top"
+        style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
         {tab === 'home' && <HomeView sync={sync} userId={userId} simple={simple} />}
         {tab === 'people' && <PeopleView sync={sync} userId={userId} onRemind={(id) => setSendFor(id)} />}
         {tab === 'settings' && <SettingsView sync={sync} userId={userId} />}
       </main>
 
       {/* Big, labelled "New" button above the nav — not an unlabeled floating "+" */}
-      <div className="fixed inset-x-0 bottom-[5.2rem] z-30 flex justify-center px-5 pointer-events-none safe-bottom">
+      <div inert={ringing ? true : undefined} className="fixed inset-x-0 z-30 flex justify-center px-5 pointer-events-none"
+        style={{ bottom: 'calc(5.2rem + env(safe-area-inset-bottom))' }}>
         <button type="button" onClick={() => setSendFor(null)}
           className="pointer-events-auto tap w-full max-w-xl rounded-2xl bg-brand text-white text-[1.15rem] font-bold shadow-lg inline-flex items-center justify-center gap-2 active:scale-[.98]">
           <Plus className="w-6 h-6" aria-hidden /> {t('nav.new')}
         </button>
       </div>
 
-      <nav aria-label={t('nav.home')} className="fixed inset-x-0 bottom-0 z-30 bg-card border-t-2 border-line safe-bottom">
+      <nav inert={ringing ? true : undefined} aria-label={t('nav.main')} className="fixed inset-x-0 bottom-0 z-30 bg-card border-t-2 border-line safe-bottom">
         <ul className="max-w-xl mx-auto grid grid-cols-3">
           {navItems.map(({ id, label, Icon }) => {
             const active = tab === id;
@@ -192,9 +207,12 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
                   <span className="text-[0.95rem]">{label}</span>
                   {active && <span className="absolute top-0 h-1 w-12 rounded-b-full bg-brand" aria-hidden />}
                   {badge > 0 && (
-                    <span className="absolute top-1.5 ms-8 min-w-6 h-6 px-1.5 rounded-full bg-alarm text-white text-[0.8rem] grid place-items-center">
-                      {badge}
-                    </span>
+                    <>
+                      <span aria-hidden className="absolute top-1.5 ms-8 min-w-6 h-6 px-1.5 rounded-full bg-alarm text-white text-[0.8rem] grid place-items-center">
+                        {badge}
+                      </span>
+                      <span className="sr-only">{t('nav.badge', { n: badge })}</span>
+                    </>
                   )}
                 </button>
               </li>

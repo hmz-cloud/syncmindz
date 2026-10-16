@@ -36,7 +36,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
   const [note, setNote] = useState('');
   const [kind, setKind] = useState<ItemKind>('reminder');
   const [preset, setPreset] = useState<Preset>('in15');
-  const [date, setDate] = useState(toDateInput(new Date()));
+  const [date, setDate] = useState(toDateInput(presetDate('in1h')));
   const [time, setTime] = useState(toTimeInput(presetDate('in1h')));
   const [repeat, setRepeat] = useState<Repeat>('none');
   const [busy, setBusy] = useState(false);
@@ -54,12 +54,14 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
   }, [preset, date, time]);
 
   const submit = async () => {
-    if (!(dueAt.getTime() > Date.now())) { setError(t('send.past')); return; }
+    // Re-compute relative presets at the moment of sending ("in 15 min" means from now, not from when tapped).
+    const at = preset === 'custom' ? new Date(`${date}T${time}`) : presetDate(preset);
+    if (!(at.getTime() > Date.now())) { setError(t('send.past')); return; }
     setBusy(true); setError('');
     try {
       await actions.send({
         receiver_id: receiver, kind: alarmsAllowed ? kind : 'reminder',
-        title: title.trim(), note: note.trim() || undefined, due_at: dueAt.toISOString(), repeat,
+        title: title.trim(), note: note.trim() || undefined, due_at: at.toISOString(), repeat,
       });
       toast({ text: isMe ? t('send.saved') : t('send.sent', { name: who }) });
       onClose();
@@ -75,7 +77,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
 
   const choice = (active: boolean) =>
     `tap w-full rounded-2xl border-2 px-4 py-3 text-start font-semibold transition-colors ${
-      active ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line bg-card hover:border-ink-2'}`;
+      active ? 'border-brand bg-brand-soft text-brand-dark' : 'border-field bg-card hover:border-ink-2'}`;
 
   const footer = (
     <div className="flex gap-3 pb-2">
@@ -97,7 +99,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
   );
 
   return (
-    <Sheet title={t('send.title')} onClose={onClose} footer={footer}>
+    <Sheet title={t('send.title')} onClose={onClose} footer={footer} dismissible={!title.trim() && !note.trim()}>
       {/* progress: text, not just dots */}
       <p className="text-ink-2 font-semibold" aria-live="polite">{t('send.step', { n: lang === 'ar' ? '١٢٣'[step - 1] : step })}</p>
       <div className="flex gap-1.5 mt-2 mb-5" aria-hidden>
@@ -129,14 +131,14 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
         <div className="space-y-5">
           <div>
             <label htmlFor="title" className="block text-[1.3rem] font-bold mb-2">{t('send.titleLabel')}</label>
-            <input id="title" data-autofocus maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)}
+            <input id="title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)}
               placeholder={t('send.titlePlaceholder')}
-              className="tap w-full rounded-2xl border-2 border-line bg-card px-4 text-[1.15rem] focus:border-brand outline-none" />
+              className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-[1.15rem] focus:border-brand outline-none" />
             <p className="mt-3 mb-2 text-ink-2 font-semibold">{t('send.ideas')}</p>
             <div className="flex flex-wrap gap-2">
               {IDEAS.map((k) => (
                 <button key={k} type="button" onClick={() => setTitle(t(k))}
-                  className="min-h-[2.75rem] rounded-full border-2 border-line bg-card px-4 font-medium hover:border-brand">
+                  className="min-h-[2.75rem] rounded-full border-2 border-field bg-card px-4 font-medium hover:border-brand">
                   {t(k)}
                 </button>
               ))}
@@ -147,7 +149,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
             <div>
               <label htmlFor="note" className="block font-semibold mb-2">{t('send.noteLabel')}</label>
               <input id="note" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)}
-                className="tap w-full rounded-2xl border-2 border-line bg-card px-4 focus:border-brand outline-none" />
+                className="tap w-full rounded-2xl border-2 border-field bg-card px-4 focus:border-brand outline-none" />
             </div>
           )}
 
@@ -190,12 +192,12 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
                 <label className="block">
                   <span className="block font-semibold mb-1">{t('send.date')}</span>
                   <input type="date" value={date} min={toDateInput(new Date())} onChange={(e) => setDate(e.target.value)}
-                    className="tap w-full rounded-2xl border-2 border-line bg-card px-3 focus:border-brand outline-none" />
+                    className="tap w-full rounded-2xl border-2 border-field bg-card px-3 focus:border-brand outline-none" />
                 </label>
                 <label className="block">
                   <span className="block font-semibold mb-1">{t('send.time')}</span>
                   <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
-                    className="tap w-full rounded-2xl border-2 border-line bg-card px-3 focus:border-brand outline-none" />
+                    className="tap w-full rounded-2xl border-2 border-field bg-card px-3 focus:border-brand outline-none" />
                 </label>
               </div>
             )}
@@ -215,11 +217,14 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
           {/* Plain-language summary before sending */}
           <div className="rounded-2xl bg-card border-2 border-line p-4 space-y-2">
             <p className="font-bold text-[1.1rem]">{title}</p>
-            <p>{t('send.summary', {
-              kind: t(alarmsAllowed && kind === 'alarm' ? 'item.alarm' : 'item.reminder'),
-              name: who,
-              when: isNaN(dueAt.getTime()) ? '—' : formatWhen(dueAt.toISOString(), lang, t),
-            })}</p>
+            {(() => {
+              const vars = {
+                kind: t(alarmsAllowed && kind === 'alarm' ? 'item.alarm' : 'item.reminder'),
+                name: who,
+                when: isNaN(dueAt.getTime()) ? '—' : formatWhen(dueAt.toISOString(), lang, t),
+              };
+              return <p>{t(isMe ? 'send.summaryMe' : 'send.summary', vars)}</p>;
+            })()}
             {!isMe && (
               <p className={`flex items-center gap-2 font-semibold ${willAutoSet ? 'text-ok' : 'text-warn'}`}>
                 {willAutoSet ? <ShieldCheck className="w-5 h-5" aria-hidden /> : <Hourglass className="w-5 h-5" aria-hidden />}

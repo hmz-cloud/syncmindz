@@ -16,7 +16,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={show}>
       {children}
-      <div aria-live="polite" role="status" className="fixed inset-x-0 bottom-28 z-[60] flex justify-center px-4 pointer-events-none">
+      <div aria-live="polite" role="status" className="fixed inset-x-0 z-[60] flex justify-center px-4 pointer-events-none"
+        style={{ bottom: 'calc(10.5rem + env(safe-area-inset-bottom))' }}>
         {msg && (
           <div className={`pointer-events-auto flex items-center gap-3 rounded-2xl px-5 py-3 shadow-xl text-white text-[1rem] max-w-md
             ${msg.tone === 'error' ? 'bg-alarm' : 'bg-ink'}`}>

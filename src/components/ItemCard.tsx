@@ -1,6 +1,6 @@
 import { AlarmClock, Bell, Check, Repeat, X, CircleAlert, Clock3, CheckCircle2 } from 'lucide-react';
 import { useT } from '../lib/i18n';
-import { formatWhen, ringTime } from '../lib/time';
+import { formatTime, formatWhen, ringTime, sameDay } from '../lib/time';
 import { Avatar } from './ui/Avatar';
 import { Button } from './ui/Button';
 import type { Item } from '../types';
@@ -56,9 +56,14 @@ export function IncomingCard({ item, fromName, big, onDone }: {
 export function SentCard({ item, toName, onCancel }: { item: Item; toName: string; onCancel?: () => void }) {
   const { t, lang } = useT();
   const s = item.status;
+  // Repeating items roll forward after Done, so show today's confirmation explicitly.
+  const doneToday = item.repeat !== 'none' && !!item.done_at && sameDay(new Date(item.done_at), new Date());
   const tone =
-    s === 'done' ? 'text-ok' : s === 'missed' || s === 'declined' ? 'text-alarm' : s === 'pending' ? 'text-warn' : 'text-ink-2';
-  const Icon = s === 'done' ? CheckCircle2 : s === 'missed' || s === 'declined' ? CircleAlert : Clock3;
+    s === 'done' || doneToday ? 'text-ok' : s === 'missed' || s === 'declined' ? 'text-alarm' : s === 'pending' ? 'text-warn' : 'text-ink-2';
+  const Icon = s === 'done' || doneToday ? CheckCircle2 : s === 'missed' || s === 'declined' ? CircleAlert : Clock3;
+  const statusText = doneToday
+    ? t('item.status.doneAt', { name: toName, time: formatTime(new Date(item.done_at!), lang) })
+    : t(`item.status.${s}`, { name: toName });
   return (
     <article className="rounded-3xl bg-card border-2 border-line p-5">
       <div className="flex items-start gap-3">
@@ -69,7 +74,7 @@ export function SentCard({ item, toName, onCancel }: { item: Item; toName: strin
           <p className="text-[0.98rem] mt-0.5">{formatWhen(ringTime(item), lang, t)}</p>
           <p className={`mt-2 flex items-center gap-1.5 font-semibold ${tone}`}>
             <Icon className="w-5 h-5 shrink-0" aria-hidden />
-            {t(`item.status.${s}`, { name: toName })}
+            {statusText}
           </p>
           {item.reply && <p className="mt-1 text-ink-2">{t('item.replied', { reply: item.reply })}</p>}
         </div>

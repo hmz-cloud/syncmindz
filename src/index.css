@@ -6,7 +6,8 @@
   --color-card: #ffffff;
   --color-ink: #1c1917;
   --color-ink-2: #44403c;     /* secondary text: 9.7:1 on paper */
-  --color-line: #d6d3d1;
+  --color-line: #d6d3d1;     /* decorative card borders */
+  --color-field: #8a8580;    /* form fields + choices: 3.6:1 on white (WCAG 1.4.11) */
   --color-brand: #0f766e;     /* 5.4:1 with white */
   --color-brand-dark: #115e59;
   --color-brand-soft: #e6f2f0;

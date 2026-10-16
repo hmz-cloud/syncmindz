@@ -3,6 +3,7 @@ import { AlarmClock, Bell, Check, Clock3, Volume2 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import { formatTime } from '../lib/time';
 import { canSpeak, speak, startRinging } from '../lib/sound';
+import { silenceNative } from '../lib/alarms';
 import { Avatar } from './ui/Avatar';
 import type { Item } from '../types';
 
@@ -20,6 +21,7 @@ export function RingingScreen({ item, fromName, onDone, onSnooze }: {
 
   useEffect(() => {
     const stop = startRinging(item.kind);
+    void silenceNative(item.id); // the app is ringing now; stop the phone's own notification sound
     doneRef.current?.focus();
     return stop;
   }, [item.id, item.kind]);
@@ -38,7 +40,7 @@ export function RingingScreen({ item, fromName, onDone, onSnooze }: {
           </span>
         </div>
 
-        <p className="text-[1.5rem] font-bold ltr-nums">{formatTime(new Date(), lang)}</p>
+        <p className="text-[1.5rem] font-bold">{formatTime(new Date(), lang)}</p>
         <h1 id="ring-title" className="text-[2.2rem] font-bold leading-tight max-w-md">{item.title}</h1>
         {item.note && <p className="text-[1.2rem] text-ink-2 max-w-md">{item.note}</p>}
 
@@ -63,7 +65,7 @@ export function RingingScreen({ item, fromName, onDone, onSnooze }: {
                 const on = reply === text;
                 return (
                   <button key={r} type="button" aria-pressed={on} onClick={() => setReply(on ? undefined : text)}
-                    className={`min-h-[3rem] rounded-full border-2 px-5 font-semibold ${on ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line bg-card'}`}>
+                    className={`min-h-[3rem] rounded-full border-2 px-5 font-semibold ${on ? 'border-brand bg-brand-soft text-brand-dark' : 'border-field bg-card'}`}>
                     {text}
                   </button>
                 );

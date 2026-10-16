@@ -28,7 +28,7 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
       await Share.share({ text });
     } catch {
       await navigator.clipboard?.writeText(me?.invite_code ?? '');
-      toast({ text: '✓' });
+      toast({ text: t('common.copied') });
     }
   };
 
@@ -46,9 +46,15 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
     }
   };
 
-  const setLevel = (id: string, level: TrustLevel) =>
-    actions.setRule(id, { level }).then(() => toast({ text: t('people.saved') }))
-      .catch((e) => toast({ text: t(errorKey(e)), tone: 'error' }));
+  // Every action: show success or the error, and re-sync from the server on failure.
+  const [acting, setActing] = useState(false);
+  const guard = (p: Promise<unknown>, ok?: string) => {
+    setActing(true);
+    return p.then(() => { if (ok) toast({ text: ok }); })
+      .catch((e) => { toast({ text: t(errorKey(e)), tone: 'error' }); void actions.reload(); })
+      .finally(() => setActing(false));
+  };
+  const setLevel = (id: string, level: TrustLevel) => guard(actions.setRule(id, { level }), t('people.saved'));
 
   return (
     <div className="space-y-8">
@@ -61,8 +67,8 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
             <p className="font-semibold text-[1.1rem]">{t('people.incoming', { name: nameOf(c.requester_id) })}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <Button variant="secondary" onClick={() => actions.respondConnection(c.id, false)}>{t('people.decline')}</Button>
-            <Button onClick={() => actions.respondConnection(c.id, true)}>{t('people.accept')}</Button>
+            <Button variant="secondary" disabled={acting} onClick={() => guard(actions.respondConnection(c.id, false))}>{t('people.decline')}</Button>
+            <Button disabled={acting} onClick={() => guard(actions.respondConnection(c.id, true), t('people.saved'))}>{t('people.accept')}</Button>
           </div>
         </div>
       ))}
@@ -80,7 +86,7 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
                 <p className="flex-1 text-[1.15rem] font-semibold">{p.display_name}</p>
                 <button type="button" onClick={() => onRemind(p.id)} aria-label={`${t('people.remind')}: ${p.display_name}`}
                   className="tap min-w-[3.3rem] grid place-items-center rounded-full bg-brand text-white">
-                  <Send className="w-5 h-5" aria-hidden />
+                  <Send className="w-5 h-5 rtl:-scale-x-100" aria-hidden />
                 </button>
                 <button type="button" onClick={() => setOpen(expanded ? null : p.id)} aria-expanded={expanded}
                   aria-controls={`trust-${p.id}`} aria-label={t('people.trustTitle', { name: p.display_name })}
@@ -103,13 +109,13 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
                   {rule.level !== 'blocked' && (
                     <label className="tap flex items-center gap-3 rounded-2xl px-3 hover:bg-paper cursor-pointer">
                       <input type="checkbox" checked={rule.allow_alarms}
-                        onChange={(e) => void actions.setRule(p.id, { allow_alarms: e.target.checked })}
+                        onChange={(e) => guard(actions.setRule(p.id, { allow_alarms: e.target.checked }), t('people.saved'))}
                         className="w-6 h-6 accent-brand" />
                       <span>{t('people.allowAlarms')}</span>
                     </label>
                   )}
                   <Button variant="danger" block icon={<Trash2 className="w-5 h-5" aria-hidden />}
-                    onClick={() => { if (confirm(t('people.removeConfirm', { name: p.display_name }))) void actions.removePerson(p.id); }}>
+                    onClick={() => { if (confirm(t('people.removeConfirm', { name: p.display_name }))) void guard(actions.removePerson(p.id)); }}>
                     {t('people.remove', { name: p.display_name })}
                   </Button>
                 </div>
@@ -129,12 +135,13 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
       <section aria-labelledby="h-code" className="rounded-3xl bg-brand-soft p-5 space-y-3">
         <h2 id="h-code" className="text-[1.2rem] font-bold">{t('people.myCode')}</h2>
         <p className="text-ink-2">{t('people.myCodeHint')}</p>
-        <p className="text-[2.4rem] font-bold tracking-[0.25em] text-brand-dark text-center ltr-nums" aria-label={(me?.invite_code ?? '').split('').join(' ')}>
-          {me?.invite_code}
+        <p className="text-[2.4rem] font-bold tracking-[0.25em] text-brand-dark text-center ltr-nums">
+          <span aria-hidden>{me?.invite_code}</span>
+          <span className="sr-only">{(me?.invite_code ?? '').split('').join(' ')}</span>
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Button variant="secondary" icon={<Copy className="w-5 h-5" aria-hidden />}
-            onClick={() => { void navigator.clipboard?.writeText(me?.invite_code ?? ''); toast({ text: '✓' }); }}>
+            onClick={() => { void navigator.clipboard?.writeText(me?.invite_code ?? ''); toast({ text: t('common.copied') }); }}>
             {t('common.copy')}
           </Button>
           <Button icon={<Share2 className="w-5 h-5" aria-hidden />} onClick={shareCode}>{t('people.share')}</Button>
@@ -147,7 +154,7 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
           <label htmlFor="code" className="block text-ink-2">{t('people.addHint')}</label>
           <input id="code" inputMode="numeric" pattern="[0-9]*" maxLength={6} dir="ltr" value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className="tap w-full rounded-2xl border-2 border-line bg-card px-4 text-center text-[1.6rem] tracking-[0.4em] font-bold focus:border-brand outline-none ltr-nums" />
+            className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-center text-[1.6rem] tracking-[0.4em] font-bold focus:border-brand outline-none ltr-nums" />
           <Button type="submit" block disabled={busy || code.length !== 6} icon={<UserPlus className="w-5 h-5" aria-hidden />}>
             {t('people.add')}
           </Button>
