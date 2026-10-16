@@ -78,17 +78,18 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
         {people.length === 0 && <p className="rounded-3xl bg-card border-2 border-dashed border-line p-6 text-ink-2">{t('people.empty')}</p>}
         {people.map((p) => {
           const rule = ruleFor(userId, p.id);
-          const expanded = open === p.id;
+          const expanded = open === p.id || (open === null && people.length <= 2);
           return (
             <article key={p.id} className="rounded-3xl bg-card border-2 border-line">
               <div className="flex items-center gap-3 p-4">
                 <Avatar id={p.id} name={p.display_name} />
                 <p className="flex-1 text-[1.15rem] font-semibold">{p.display_name}</p>
                 <button type="button" onClick={() => onRemind(p.id)} aria-label={`${t('people.remind')}: ${p.display_name}`}
-                  className="tap min-w-[3.3rem] grid place-items-center rounded-full bg-brand text-white">
+                  className="tap inline-flex items-center gap-2 px-4 rounded-2xl bg-brand text-white font-semibold">
                   <Send className="w-5 h-5 rtl:-scale-x-100" aria-hidden />
+                  <span className="hidden min-[380px]:inline">{t('people.remind')}</span>
                 </button>
-                <button type="button" onClick={() => setOpen(expanded ? null : p.id)} aria-expanded={expanded}
+                <button type="button" onClick={() => setOpen(expanded ? '__none' : p.id)} aria-expanded={expanded}
                   aria-controls={`trust-${p.id}`} aria-label={t('people.trustTitle', { name: p.display_name })}
                   className="tap min-w-[3.3rem] grid place-items-center rounded-full border-2 border-line">
                   <ChevronDown className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden />

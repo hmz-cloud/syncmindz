@@ -10,10 +10,11 @@ import { useToast } from './ui/Toast';
 import type { SyncState } from '../hooks/useSync';
 import type { ItemKind, Repeat } from '../types';
 
-type Preset = 'in15' | 'in1h' | 'tonight' | 'tomorrow' | 'custom';
+type Preset = 'in1' | 'in15' | 'tonight' | 'tomorrow' | 'in1h' | 'custom';
 
 function presetDate(p: Exclude<Preset, 'custom'>) {
   const d = new Date();
+  if (p === 'in1') d.setMinutes(d.getMinutes() + 1);
   if (p === 'in15') d.setMinutes(d.getMinutes() + 15, 0, 0);
   if (p === 'in1h') d.setHours(d.getHours() + 1, d.getMinutes(), 0, 0);
   if (p === 'tonight') { d.setHours(20, 0, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); }
@@ -136,7 +137,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
               className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-[1.15rem] focus:border-brand outline-none" />
             <p className="mt-3 mb-2 text-ink-2 font-semibold">{t('send.ideas')}</p>
             <div className="flex flex-wrap gap-2">
-              {IDEAS.map((k) => (
+              {IDEAS.slice(0, simple ? 4 : IDEAS.length).map((k) => (
                 <button key={k} type="button" onClick={() => setTitle(t(k))}
                   className="min-h-[2.75rem] rounded-full border-2 border-field bg-card px-4 font-medium hover:border-brand">
                   {t(k)}
@@ -178,9 +179,9 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
           <fieldset>
             <legend className="text-[1.3rem] font-bold mb-3">{t('send.stepWhen')}</legend>
             <div className="grid grid-cols-2 gap-3">
-              {(['in15', 'in1h', 'tonight', 'tomorrow'] as const).map((p) => (
+              {(['in1', 'in15', 'tonight', 'tomorrow'] as const).map((p) => (
                 <button key={p} type="button" aria-pressed={preset === p} onClick={() => setPreset(p)} className={choice(preset === p)}>
-                  {t(`send.when${p === 'in15' ? 'In15' : p === 'in1h' ? 'In1h' : p === 'tonight' ? 'Tonight' : 'Tomorrow'}`)}
+                  {t(`send.when${p === 'in1' ? 'In1' : p === 'in15' ? 'In15' : p === 'tonight' ? 'Tonight' : 'Tomorrow'}`)}
                 </button>
               ))}
             </div>
