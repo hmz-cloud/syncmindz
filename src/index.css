@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-paper: #f7f5f0;
+  --color-card: #ffffff;
+  --color-ink: #1c1917;
+  --color-ink-2: #44403c;     /* secondary text: 9.7:1 on paper */
+  --color-line: #d6d3d1;
+  --color-brand: #0f766e;     /* 5.4:1 with white */
+  --color-brand-dark: #115e59;
+  --color-brand-soft: #e6f2f0;
+  --color-alarm: #b91c1c;     /* 6.5:1 with white */
+  --color-alarm-soft: #fdecec;
+  --color-warn: #92400e;
+  --color-warn-soft: #fdf3e2;
+  --color-ok: #166534;
+  --color-ok-soft: #e8f5ec;
+}
+
+/* Text size is a user setting, applied on <html>. Everything is in rem. */
+html { font-size: 17px; -webkit-text-size-adjust: 100%; }
+html[data-text="large"]  { font-size: 19px; }
+html[data-text="xlarge"] { font-size: 22px; }
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Visible focus for keyboard and switch-access users */
+:focus-visible { outline: 3px solid var(--color-brand); outline-offset: 3px; border-radius: 12px; }
+
+/* Safe areas for notches and home indicators */
+.safe-top    { padding-top: max(env(safe-area-inset-top), 0.75rem); }
+.safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+
+/* Primary tap target: 56px minimum (WCAG asks 44; older hands need more). */
+.tap { min-height: 3.3rem; }
+html.simple .tap { min-height: 4rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@keyframes pulse-ring { 0% { transform: scale(.9); opacity: .6 } 100% { transform: scale(1.5); opacity: 0 } }
+.pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
+
+/* Numbers: keep digits in a code from reordering in RTL */
+.ltr-nums { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
