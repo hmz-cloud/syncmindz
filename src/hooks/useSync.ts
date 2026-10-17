@@ -146,7 +146,10 @@ export function useSync(userId: string) {
       const now = new Date().toISOString();
       if (item.repeat !== 'none') {
         // repeating: record the reply and roll forward to the next occurrence
-        const next = nextOccurrence(item.due_at, item.repeat);
+        // Always move past the current occurrence — "Done" pressed early (7:50 for an 8:00 dose)
+        // must not leave today's 8:00 alarm armed.
+        const from = new Date(Math.max(Date.now(), new Date(item.due_at).getTime()));
+        const next = nextOccurrence(item.due_at, item.repeat, from);
         const patch = { status: 'scheduled' as const, due_at: next, snooze_until: null, reply: reply ?? null, done_at: now };
         patchLocal(item.id, patch);
         await updateOrQueue(item.id, { ...patch, due_pushed_at: null });

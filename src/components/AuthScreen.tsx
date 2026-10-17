@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mail, Globe } from 'lucide-react';
 import { supabase, errorKey } from '../lib/supabase';
 import { useT } from '../lib/i18n';
@@ -13,13 +13,27 @@ export function AuthScreen({ onLang }: { onLang: (l: Lang) => void }) {
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
+
+  const resend = async () => {
+    setBusy(true); setError('');
+    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
+    setBusy(false);
+    if (error) setError(t(errorKey(error))); else setCooldown(60);
+  };
 
   const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setError('');
     const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
     setBusy(false);
-    if (error) setError(t(errorKey(error))); else setStep('code');
+    if (error) setError(t(errorKey(error))); else { setStep('code'); setCooldown(60); }
   };
 
   const verify = async (e: React.FormEvent) => {
@@ -71,6 +85,9 @@ export function AuthScreen({ onLang }: { onLang: (l: Lang) => void }) {
               className="tap w-full rounded-2xl border-2 border-field bg-card px-4 text-center text-[1.8rem] tracking-[0.4em] font-bold focus:border-brand outline-none ltr-nums"
             />
             <Button type="submit" block disabled={busy || code.length < 6}>{t('auth.verify')}</Button>
+            <Button variant="ghost" block disabled={busy || cooldown > 0} onClick={() => void resend()}>
+              {cooldown > 0 ? t('auth.resendIn', { n: cooldown.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-GB') }) : t('auth.resend')}
+            </Button>
             <Button variant="ghost" block onClick={() => { setStep('email'); setCode(''); setError(''); }}>
               {t('auth.changeEmail')}
             </Button>

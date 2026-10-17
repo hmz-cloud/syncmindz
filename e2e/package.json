@@ -1,0 +1,7 @@
+{
+  "name": "syncmindz-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Headless two-person UI test against an in-memory Supabase stand-in. See loop.mjs.",
+  "dependencies": { "playwright": "1.56.1" }
+}

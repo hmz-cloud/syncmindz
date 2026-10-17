@@ -15,6 +15,7 @@ export function SettingsView({ sync, userId }: { sync: SyncState; userId: string
   const { me, actions } = sync;
   const [name, setName] = useState(me?.display_name ?? '');
   const [perm, setPerm] = useState<PermState>('granted');
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => { void checkPermission().then(setPerm); }, []);
   if (!me) return null;
@@ -26,15 +27,19 @@ export function SettingsView({ sync, userId }: { sync: SyncState; userId: string
     `tap flex-1 rounded-2xl border-2 font-semibold ${active ? 'border-brand bg-brand-soft text-brand-dark' : 'border-field bg-card'}`;
 
   const testAlarm = async () => {
+    if (testing) return;
     unlockAudio();
+    setTesting(true);
     try {
       await actions.send({
-        receiver_id: userId, kind: 'alarm', title: t('settings.test'),
+        receiver_id: userId, kind: 'alarm', title: t('settings.testTitle'),
         due_at: new Date(Date.now() + 10_000).toISOString(), repeat: 'none',
       });
       toast({ text: t('settings.testArmed') });
     } catch (e) {
       toast({ text: t(errorKey(e)), tone: 'error' });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -97,10 +102,10 @@ export function SettingsView({ sync, userId }: { sync: SyncState; userId: string
       <section className="rounded-3xl bg-card border-2 border-line p-5 space-y-3">
         <p className="font-bold text-[1.15rem]">{t('settings.test')}</p>
         <p className="text-ink-2">{t('settings.testHint')}</p>
-        <Button block onClick={testAlarm} icon={<Volume2 className="w-5 h-5" aria-hidden />}>{t('settings.test')}</Button>
+        <Button block disabled={testing} onClick={testAlarm} icon={<Volume2 className="w-5 h-5" aria-hidden />}>{t('settings.test')}</Button>
       </section>
 
-      <Button variant="danger" block onClick={() => void supabase.auth.signOut()} icon={<LogOut className="w-5 h-5" aria-hidden />}>
+      <Button variant="danger" block onClick={() => { if (window.confirm(t('settings.signOutConfirm'))) void supabase.auth.signOut(); }} icon={<LogOut className="w-5 h-5" aria-hidden />}>
         {t('settings.signOut')}
       </Button>
     </div>

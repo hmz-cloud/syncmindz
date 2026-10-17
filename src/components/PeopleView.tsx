@@ -81,9 +81,11 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
           const expanded = open === p.id || (open === null && people.length <= 2);
           return (
             <article key={p.id} className="rounded-3xl bg-card border-2 border-line">
-              <div className="flex items-center gap-3 p-4">
+              {/* Wraps the buttons onto a second line when text is extra large on a small phone */}
+              <div className="flex flex-wrap items-center gap-3 p-4">
                 <Avatar id={p.id} name={p.display_name} />
-                <p className="flex-1 text-[1.15rem] font-semibold">{p.display_name}</p>
+                <p className="flex-1 min-w-[5rem] break-words text-[1.15rem] font-semibold">{p.display_name}</p>
+                <div className="ms-auto flex items-center gap-3">
                 <button type="button" onClick={() => onRemind(p.id)} aria-label={`${t('people.remind')}: ${p.display_name}`}
                   className="tap inline-flex items-center gap-2 px-4 rounded-2xl bg-brand text-white font-semibold">
                   <Send className="w-5 h-5 rtl:-scale-x-100" aria-hidden />
@@ -94,6 +96,7 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
                   className="tap min-w-[3.3rem] grid place-items-center rounded-full border-2 border-line">
                   <ChevronDown className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden />
                 </button>
+                </div>
               </div>
               {expanded && rule && (
                 <div id={`trust-${p.id}`} className="border-t-2 border-line p-4 space-y-3">
@@ -140,7 +143,8 @@ export function PeopleView({ sync, userId, onRemind }: { sync: SyncState; userId
           <span aria-hidden>{me?.invite_code}</span>
           <span className="sr-only">{(me?.invite_code ?? '').split('').join(' ')}</span>
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        {/* Side by side only when there is room; at large text on small phones they stack */}
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
           <Button variant="secondary" icon={<Copy className="w-5 h-5" aria-hidden />}
             onClick={() => { void navigator.clipboard?.writeText(me?.invite_code ?? ''); toast({ text: t('common.copied') }); }}>
             {t('common.copy')}

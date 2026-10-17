@@ -19,10 +19,11 @@ const NATIVE_TEXT = {
   en: { alarms: 'Alarms', alarmsDesc: 'Loud alarms from your people', reminders: 'Reminders', remindersDesc: 'Gentle reminders', done: 'Done', snooze: 'Remind me in 10 minutes' },
 };
 
-export async function setupNative(onOpenItem: (itemId: string, action: string) => void, lang: 'ar' | 'en' = 'ar') {
+/** Channel names and lock-screen button text in the user's language. Safe to call again when the
+ * language changes: Android updates a channel's name/description when it is re-created with the same id. */
+export async function setNativeLanguage(lang: 'ar' | 'en') {
   if (!isNative) return;
   const tx = NATIVE_TEXT[lang];
-
   await LocalNotifications.createChannel({
     id: 'alarms', name: tx.alarms, description: tx.alarmsDesc,
     importance: 5, visibility: 1, sound: 'alarm.wav', vibration: true,
@@ -40,6 +41,11 @@ export async function setupNative(onOpenItem: (itemId: string, action: string) =
       ],
     }],
   });
+}
+
+export async function setupNative(onOpenItem: (itemId: string, action: string) => void, lang: 'ar' | 'en' = 'ar') {
+  if (!isNative) return;
+  await setNativeLanguage(lang);
   // Refresh the push token on every launch (it can change), if permission was already given.
   try {
     if ((await PushNotifications.checkPermissions()).receive === 'granted') await PushNotifications.register();

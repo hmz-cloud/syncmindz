@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlarmClock, Bell, Check, ChevronLeft, ChevronRight, ShieldCheck, Hourglass } from 'lucide-react';
-import { useT } from '../lib/i18n';
+import { makeT, useT } from '../lib/i18n';
 import { formatWhen, toDateInput, toTimeInput } from '../lib/time';
 import { errorKey } from '../lib/supabase';
 import { Sheet } from './ui/Sheet';
@@ -29,7 +29,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
 }) {
   const { t, lang } = useT();
   const toast = useToast();
-  const { people, ruleFor, actions, nameOf } = sync;
+  const { people, profiles, ruleFor, actions, nameOf } = sync;
 
   const [step, setStep] = useState(initialReceiver ? 2 : 1);
   const [receiver, setReceiver] = useState(initialReceiver ?? '');
@@ -48,6 +48,8 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
   const alarmsAllowed = isMe || !rule || rule.allow_alarms;
   const willAutoSet = isMe || (rule?.level === 'auto' && (kind === 'reminder' || rule.allow_alarms));
   const who = isMe ? t('send.me') : nameOf(receiver);
+  // Quick ideas are written in the language of the person whose phone will show them.
+  const tReceiver = makeT(profiles.find((p) => p.id === receiver)?.language ?? lang);
 
   const dueAt = useMemo(() => {
     if (preset !== 'custom') return presetDate(preset);
@@ -138,8 +140,8 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
             <p className="mt-3 mb-2 text-ink-2 font-semibold">{t('send.ideas')}</p>
             <div className="flex flex-wrap gap-2">
               {IDEAS.slice(0, simple ? 4 : IDEAS.length).map((k) => (
-                <button key={k} type="button" onClick={() => setTitle(t(k))}
-                  className="min-h-[2.75rem] rounded-full border-2 border-field bg-card px-4 font-medium hover:border-brand">
+                <button key={k} type="button" onClick={() => setTitle(tReceiver(k))}
+                  className="tap rounded-full border-2 border-field bg-card px-4 font-medium hover:border-brand">
                   {t(k)}
                 </button>
               ))}
@@ -179,7 +181,7 @@ export function SendSheet({ sync, userId, simple, initialReceiver, onClose }: {
           <fieldset>
             <legend className="text-[1.3rem] font-bold mb-3">{t('send.stepWhen')}</legend>
             <div className="grid grid-cols-2 gap-3">
-              {(['in1', 'in15', 'tonight', 'tomorrow'] as const).map((p) => (
+              {(['in1', 'in15', 'tonight', 'tomorrow'] as const).filter((p) => p !== 'tonight' || new Date().getHours() < 20).map((p) => (
                 <button key={p} type="button" aria-pressed={preset === p} onClick={() => setPreset(p)} className={choice(preset === p)}>
                   {t(`send.when${p === 'in1' ? 'In1' : p === 'in15' ? 'In15' : p === 'tonight' ? 'Tonight' : 'Tomorrow'}`)}
                 </button>

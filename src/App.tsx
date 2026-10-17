@@ -3,7 +3,8 @@ import { Home, Plus, Settings, Users } from 'lucide-react';
 import { LangContext, makeT } from './lib/i18n';
 import { isConfigured } from './lib/supabase';
 import { ringTime } from './lib/time';
-import { isNative, setupNative, syncLocalAlarms, webNotify, checkPermission, requestPermission } from './lib/alarms';
+import { App as CapApp } from '@capacitor/app';
+import { isNative, setupNative, setNativeLanguage, syncLocalAlarms, webNotify, checkPermission, requestPermission } from './lib/alarms';
 import { unlockAudio } from './lib/sound';
 import { useSession, useSync } from './hooks/useSync';
 import { AuthScreen, NameSetup } from './components/AuthScreen';
@@ -36,7 +37,7 @@ export default function App() {
     return <div className="p-8 font-semibold">{makeT(guestLang)('setup.missing')}</div>;
   }
 
-  if (session === undefined) return <Splash />;
+  if (session === undefined) return <Splash lang={guestLang} />;
 
   if (!session) {
     applyDocument(guestLang, 'large', false);
@@ -54,8 +55,13 @@ export default function App() {
   );
 }
 
-function Splash() {
-  return <div className="min-h-dvh grid place-items-center"><span className="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin" aria-label="…" /></div>;
+function Splash({ lang }: { lang: Lang }) {
+  return (
+    <div role="status" className="min-h-dvh grid place-items-center">
+      <span aria-hidden className="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin" />
+      <span className="sr-only">{makeT(lang)('common.loading')}</span>
+    </div>
+  );
 }
 
 type Tab = 'home' | 'people' | 'settings';
@@ -65,7 +71,10 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
   const { me, items, nameOf, actions, loaded } = sync;
   const toast = useToast();
 
-  const lang = me?.language ?? fallbackLang;
+  // A brand-new account has the database default language ('ar'); until the person has a name,
+  // keep the language they picked on the sign-in screen, and save it with their name.
+  const isNew = !!me && !me.display_name;
+  const lang = isNew ? fallbackLang : me?.language ?? fallbackLang;
   const simple = me?.simple_mode ?? false;
   const t = useMemo(() => makeT(lang), [lang]);
 
@@ -109,6 +118,25 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Lock-screen buttons and channel names follow the language setting (setupNative uses the first one).
+  const firstLang = useRef(true);
+  useEffect(() => {
+    if (firstLang.current) { firstLang.current = false; return; }
+    void setNativeLanguage(lang);
+  }, [lang]);
+
+  // Android Back button: never silently kill a ringing alarm or close the app from inside a sheet.
+  useEffect(() => {
+    if (!isNative) return;
+    const h = CapApp.addListener('backButton', () => {
+      if (ringing) { setRingingId(null); actions.snooze(ringing).catch(() => {}); return; } // Back = remind me in 10 min
+      if (sendFor !== undefined) { setSendFor(undefined); return; }
+      if (tab !== 'home') { setTab('home'); return; }
+      void CapApp.minimizeApp();
+    });
+    return () => { void h.then((x) => x.remove()); };
+  }, [ringing, sendFor, tab, actions]);
+
   // Mirror upcoming items into the OS alarm scheduler (works with the app closed).
   useEffect(() => {
     if (loaded) void syncLocalAlarms(mine, nameOf);
@@ -142,14 +170,14 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
     return () => window.removeEventListener('pointerdown', u);
   }, []);
 
-  if (!loaded) return <Splash />;
+  if (!loaded) return <Splash lang={lang} />;
 
   const ctx = { lang, t };
 
   if (me && !me.display_name) {
     return (
       <LangContext.Provider value={ctx}>
-        <NameSetup onSave={(n) => actions.updateProfile({ display_name: n })} />
+        <NameSetup onSave={(n) => actions.updateProfile({ display_name: n, language: fallbackLang })} />
       </LangContext.Provider>
     );
   }
@@ -222,7 +250,9 @@ function SignedIn({ userId, fallbackLang }: { userId: string; fallbackLang: Lang
       </nav>
 
       {sendFor !== undefined && (
-        <SendSheet sync={sync} userId={userId} simple={simple} initialReceiver={sendFor ?? undefined} onClose={() => setSendFor(undefined)} />
+        <div inert={ringing ? true : undefined}>
+          <SendSheet sync={sync} userId={userId} simple={simple} initialReceiver={sendFor ?? undefined} onClose={() => setSendFor(undefined)} />
+        </div>
       )}
 
       {ringing && (

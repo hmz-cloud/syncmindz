@@ -34,6 +34,9 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Placeholder text readable (5.7:1) — Tailwind's default is ~3.4:1 */
+::placeholder { color: #6b6560; opacity: 1; }
+
 /* Visible focus for keyboard and switch-access users */
 :focus-visible { outline: 3px solid var(--color-brand); outline-offset: 3px; border-radius: 12px; }
 

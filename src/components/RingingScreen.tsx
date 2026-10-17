@@ -22,7 +22,7 @@ export function RingingScreen({ item, fromName, onDone, onSnooze }: {
   useEffect(() => {
     const stop = startRinging(item.kind);
     void silenceNative(item.id); // the app is ringing now; stop the phone's own notification sound
-    doneRef.current?.focus();
+    doneRef.current?.focus({ preventScroll: true }); // keep the title in view; Done is pinned below
     return stop;
   }, [item.id, item.kind]);
 
@@ -65,7 +65,7 @@ export function RingingScreen({ item, fromName, onDone, onSnooze }: {
                 const on = reply === text;
                 return (
                   <button key={r} type="button" aria-pressed={on} onClick={() => setReply(on ? undefined : text)}
-                    className={`min-h-[3rem] rounded-full border-2 px-5 font-semibold ${on ? 'border-brand bg-brand-soft text-brand-dark' : 'border-field bg-card'}`}>
+                    className={`tap rounded-full border-2 px-5 font-semibold ${on ? 'border-brand bg-brand-soft text-brand-dark' : 'border-field bg-card'}`}>
                     {text}
                   </button>
                 );
@@ -75,7 +75,8 @@ export function RingingScreen({ item, fromName, onDone, onSnooze }: {
         )}
       </div>
 
-      <div className="w-full max-w-md mx-auto space-y-3 pb-4">
+      {/* Pinned to the bottom so Done is always on screen, even when big text makes the page scroll */}
+      <div className="sticky bottom-0 w-full max-w-md mx-auto space-y-3 pt-3 pb-4 bg-paper">
         <button ref={doneRef} type="button" onClick={() => onDone(reply)}
           className="w-full min-h-[5rem] rounded-3xl bg-ok text-white text-[1.6rem] font-bold inline-flex items-center justify-center gap-3 shadow-lg active:scale-[.98]">
           <Check className="w-9 h-9" aria-hidden /> {t('ring.done')}

@@ -22,6 +22,7 @@ export function Sheet({ title, onClose, children, footer, dismissible = true }: 
         .filter((x) => !x.hasAttribute('disabled'));
     (el.querySelector<HTMLElement>('[data-autofocus]') ?? focusables()[0])?.focus();
     const onKey = (e: KeyboardEvent) => {
+      if (el.closest('[inert]')) return; // an alarm is ringing on top — leave the half-written sheet alone
       if (e.key === 'Escape') closeRef.current();
       if (e.key === 'Tab') {
         const f = focusables();

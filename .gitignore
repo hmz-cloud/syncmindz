@@ -3,3 +3,4 @@ dist
 .env.local
 android/app/google-services.json
 ios/App/App/GoogleService-Info.plist
+e2e/shots/

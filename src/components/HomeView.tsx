@@ -15,7 +15,9 @@ export function HomeView({ sync, userId, simple }: { sync: SyncState; userId: st
   const { approvals, upcoming, sent } = useMemo(() => {
     const byRing = (a: Item, b: Item) => +new Date(ringTime(a)) - +new Date(ringTime(b));
     return {
-      approvals: items.filter((i) => i.receiver_id === userId && i.sender_id !== userId && i.status === 'pending'),
+      // A one-off request whose time passed more than 30 min ago can't be usefully approved any more.
+      approvals: items.filter((i) => i.receiver_id === userId && i.sender_id !== userId && i.status === 'pending'
+        && (i.repeat !== 'none' || +new Date(i.due_at) > Date.now() - 30 * 60_000)),
       upcoming: items.filter((i) => i.receiver_id === userId && ['scheduled', 'snoozed'].includes(i.status)).sort(byRing),
       sent: items
         .filter((i) => i.sender_id === userId && i.receiver_id !== userId && i.status !== 'cancelled')
